@@ -1,6 +1,7 @@
 import turtle
 from turtle import _Screen
 
+
 def init_screen():
     """Initialize main Screen"""
 
