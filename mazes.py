@@ -10,32 +10,32 @@ from constants import (CELL_SIZE, MAZE_GRID_ROWS, MAZE_GRID_COLUMNS,
 
 
 maze_level_1 = [
-    "XXXXXXXXXXXXXXXX.XXXXXXXXXXXXXXXX",
-    "X..............................OX",
-    "X.XXX.XXX.XXXXXX.XXXXXX.XXX.XXX.X",
-    "X.X X.X X.X    X.X    X.X X.X X.X",
-    "X.XXX.X X.XXXXXX.XXXXXX.X X.XXX.X",
-    "X.....XXX.X....X.X....X.XXX.....X",
-    "XXXXX.......XX.X.X.XX.......XXXXX",
-    "X.....XXXXX...........XXXXX.....X",
-    "X.XXX.......XXXXXXXXX.......XXX.X",
-    "X.....XXXXX...........XXXXX.....X",
-    "X.XXX...O...XXXX.XXXX.......XXX.X",
-    "X.X X.XXXXX.X  X.X  X.XXXXX.X X.X",
-    "X.X X.X   X.X  X.X  X.X   X.X X.X",
-    "X.X X.X   X.X  X.X  X.X   X.X X.X",
-    "X.X X.XXXXX.X  X.X  X.XXXXX.X X.X",
-    "X.XXX.......XXXX.XXXX...O...XXX.X",
-    "X.....XXXXX...........XXXXX.....X",
-    "X.XXX.......XXXXXXXXX.......XXX.X",
-    "X.....XXXXX...........XXXXX.....X",
-    "XXXXX.......XX.X.X.XX.......XXXXX",
-    "X.....XXX.X....X.X....X.XXX.....X",
-    "X.XXX.X X.XXXXXX.XXXXXX.X X.XXX.X",
-    "X.X X.X X.X    X.X    X.X X.X X.X",
-    "X.XXX.XXX.XXXXXX.XXXXXX.XXX.XXX.X",
-    "XO..............................X",
-    "XXXXXXXXXXXXXXXX.XXXXXXXXXXXXXXXX"
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "X...............O...............X",
+    "X.XXXX.XXXX.XXXXXXXXX.XXXX.XXXX.X",
+    "X.XXXX.XXXX.XXXXXXXXX.XXXX.XXXX.X",
+    "X...............................X",
+    "X.XXXX.XXX.............XXX.XXXX.X",
+    "X.XXXX.XXXX...........XXXX.XXXX.X",
+    "X......XXXXX.........XXXXX......X",
+    "XXXXXX.XXXXXX.......XXXXXX.XXXXXX",
+    "XXXXXX.XXXXXXX.....XXXXXXX.XXXXXX",
+    "XXXXXX.XXXXXXXX...XXXXXXXX.XXXXXX",
+    "XXXXXX.XXXXXXXXX.XXXXXXXXX.XXXXXX",
+    ".......XXXXXXXX...XXXXXXXX.......",
+    "XXXXXX.XXXXXXX.....XXXXXXX.XXXXXX",
+    "XXXXXX.XXXXXX.......XXXXXX.XXXXXX",
+    "XXXXXX.XXXXX.........XXXXX.XXXXXX",
+    "XXXXXX.XXXX...........XXXX.XXXXXX",
+    "X......XXX.............XXX......X",
+    "X.XXXX.XX...............XX.XXXX.X",
+    "X.XXXX.X.................X.XXXX.X",
+    "X...............O...............X",
+    "X.XXXX.XXXX.XXXXXXXXX.XXXX.XXXX.X",
+    "X.XXXX.XXXX.XXXXXXXXX.XXXX.XXXX.X",
+    "X...............................X",
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ]
 
 
@@ -48,8 +48,8 @@ class Maze:
         walls = []
         pellets = []
         power_pellets = []
-        for row in range(MAZE_GRID_ROWS):
-            for column in range(MAZE_GRID_COLUMNS):
+        for row in range(len(self.grid)):
+            for column in range(len(self.grid[row])):
                 character = self.grid[row][column]
                 character_x = MAZE_LEVEL_START_X + CELL_SIZE * column
                 character_y = MAZE_LEVEL_START_Y - CELL_SIZE * row

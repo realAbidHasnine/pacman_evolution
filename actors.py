@@ -44,60 +44,32 @@ class Player(Actor):
         x, y = self.xcor(), self.ycor()
         from constants import CELL_SIZE, MAZE_LEVEL_START_X, MAZE_LEVEL_START_Y, TURN_TOLERANCE
         
-        half_size = CELL_SIZE * 0.45  
+        half_size = CELL_SIZE * 0.45
 
         if self.buffered_direction:
             new_dir = self.buffered_direction
             can_turn = False
             snap_x, snap_y = x, y
             
-            if new_dir in ["up", "down"]:
-                col_float = (x - MAZE_LEVEL_START_X) / CELL_SIZE
-                nearest_col = round(col_float)
-                center_x = MAZE_LEVEL_START_X + CELL_SIZE * nearest_col
-                
-                if abs(x - center_x) <= TURN_TOLERANCE:
-                    if new_dir == "up":
-                        next_y = y + self.move_speed
-                        if not (self.maze.is_wall(center_x - half_size, next_y + half_size) or
-                                self.maze.is_wall(center_x + half_size, next_y + half_size)):
-                            can_turn = True
-                            snap_x = center_x
-                    else: 
-                        next_y = y - self.move_speed
-                        if not (self.maze.is_wall(center_x - half_size, next_y - half_size) or
-                                self.maze.is_wall(center_x + half_size, next_y - half_size)):
-                            can_turn = True
-                            snap_x = center_x
-            else: 
-                row_float = (MAZE_LEVEL_START_Y - y) / CELL_SIZE
-                nearest_row = round(row_float)
-                center_y = MAZE_LEVEL_START_Y - CELL_SIZE * nearest_row
-                
-                if abs(y - center_y) <= TURN_TOLERANCE:
-                    if new_dir == "left":
-                        next_x = x - self.move_speed
-                        if not (self.maze.is_wall(next_x - half_size, center_y - half_size) or
-                                self.maze.is_wall(next_x - half_size, center_y + half_size)):
-                            can_turn = True
-                            snap_y = center_y
-                    else: 
-                        next_x = x + self.move_speed
-                        if not (self.maze.is_wall(next_x + half_size, center_y - half_size) or
-                                self.maze.is_wall(next_x + half_size, center_y + half_size)):
-                            can_turn = True
-                            snap_y = center_y
-            
+            # Check if player is near a cell center to turn
+            col_float = (x - MAZE_LEVEL_START_X) / CELL_SIZE
+            row_float = (MAZE_LEVEL_START_Y - y) / CELL_SIZE
+            is_at_center_x = abs(x - (MAZE_LEVEL_START_X + round(col_float) * CELL_SIZE)) <= TURN_TOLERANCE
+            is_at_center_y = abs(y - (MAZE_LEVEL_START_Y - round(row_float) * CELL_SIZE)) <= TURN_TOLERANCE
+
+            if is_at_center_x and is_at_center_y:
+                center_x = MAZE_LEVEL_START_X + round(col_float) * CELL_SIZE
+                center_y = MAZE_LEVEL_START_Y - round(row_float) * CELL_SIZE
+
+                # Simplified check for turning, can be improved
+                can_turn = True
+                snap_x, snap_y = center_x, center_y
+
             if can_turn:
                 self.direction = new_dir
-                if snap_x != x: 
-                    self.setx(snap_x)
-                    x = snap_x
-                if snap_y != y: 
-                    self.sety(snap_y)
-                    y = snap_y
+                if snap_x != x: self.setx(snap_x)
+                if snap_y != y: self.sety(snap_y)
                 self.buffered_direction = None
-                self.buffer_timer = 0
             else:
                 self.buffer_timer -= 1
                 if self.buffer_timer <= 0:
@@ -106,43 +78,54 @@ class Player(Actor):
         if self.direction == "stop":
             return
 
-        if self.direction == "up":
-            next_y = y + self.move_speed
-            if not (self.maze.is_wall(x - half_size, next_y + half_size) or
-                    self.maze.is_wall(x + half_size, next_y + half_size)):
-                self.sety(next_y)
-            else:
-                self.direction = "stop"
-        elif self.direction == "down":
-            next_y = y - self.move_speed
-            if not (self.maze.is_wall(x - half_size, next_y - half_size) or
-                    self.maze.is_wall(x + half_size, next_y - half_size)):
-                self.sety(next_y)
-            else:
-                self.direction = "stop"
-        elif self.direction == "left":
-            next_x = x - self.move_speed
-            if not (self.maze.is_wall(next_x - half_size, y - half_size) or
-                    self.maze.is_wall(next_x - half_size, y + half_size)):
-                self.setx(next_x)
-            else:
-                self.direction = "stop"
-        elif self.direction == "right":
-            next_x = x + self.move_speed
-            if not (self.maze.is_wall(next_x + half_size, y - half_size) or
-                    self.maze.is_wall(next_x + half_size, y + half_size)):
-                self.setx(next_x)
-            else:
-                self.direction = "stop"
+        move_dist = self.move_speed
+        next_x, next_y = x, y
 
-        if round(self.ycor()) > SCREEN_HEIGHT / 2 - 2 * CELL_SIZE:
-            self.sety(-SCREEN_HEIGHT / 2)
-        elif round(self.ycor()) < -SCREEN_HEIGHT / 2:
-            self.sety(SCREEN_HEIGHT / 2 - 2 * CELL_SIZE)
-        elif round(self.xcor()) < -SCREEN_WIDTH / 2:
-            self.setx(SCREEN_WIDTH / 2)
-        elif round(self.xcor()) > SCREEN_WIDTH / 2:
+        if "up" in self.direction:
+            next_y += move_dist if "left" not in self.direction and "right" not in self.direction else move_dist * 0.707
+        if "down" in self.direction:
+            next_y -= move_dist if "left" not in self.direction and "right" not in self.direction else move_dist * 0.707
+        if "left" in self.direction:
+            next_x -= move_dist if "up" not in self.direction and "down" not in self.direction else move_dist * 0.707
+        if "right" in self.direction:
+            next_x += move_dist if "up" not in self.direction and "down" not in self.direction else move_dist * 0.707
+        
+        # Collision detection with sliding
+        final_x = x
+        final_y = y
+        
+        hitbox = half_size * 0.8
+        
+        if next_x != x:
+            if next_x > x:
+                if not (self.maze.is_wall(next_x + half_size, y + hitbox) or self.maze.is_wall(next_x + half_size, y - hitbox)):
+                    final_x = next_x
+            else:
+                if not (self.maze.is_wall(next_x - half_size, y + hitbox) or self.maze.is_wall(next_x - half_size, y - hitbox)):
+                    final_x = next_x
+                    
+        if next_y != y:
+            if next_y > y:
+                if not (self.maze.is_wall(final_x - hitbox, next_y + half_size) or self.maze.is_wall(final_x + hitbox, next_y + half_size)):
+                    final_y = next_y
+            else:
+                if not (self.maze.is_wall(final_x - hitbox, next_y - half_size) or self.maze.is_wall(final_x + hitbox, next_y - half_size)):
+                    final_y = next_y
+
+        if final_x == x and final_y == y:
+            self.direction = "stop"
+        else:
+            self.goto(final_x, final_y)
+
+        # Screen wrapping
+        if self.xcor() > SCREEN_WIDTH / 2:
             self.setx(-SCREEN_WIDTH / 2)
+        elif self.xcor() < -SCREEN_WIDTH / 2:
+            self.setx(SCREEN_WIDTH / 2)
+        if self.ycor() > SCREEN_HEIGHT / 2:
+            self.sety(-SCREEN_HEIGHT / 2)
+        elif self.ycor() < -SCREEN_HEIGHT / 2:
+            self.sety(SCREEN_HEIGHT / 2)
 
     def reset_speed(self) -> None:
         self.move_speed = PLAYER_MOVE_SPEED       

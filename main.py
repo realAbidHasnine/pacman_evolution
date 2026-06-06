@@ -21,11 +21,48 @@ def init_screen():
 
 
 def bind_controls(screen, player) -> None:
+    pressed_keys = set()
+
+    def update_direction():
+        if "Up" in pressed_keys and "Left" in pressed_keys:
+            player.queue_direction("up-left")
+        elif "Up" in pressed_keys and "Right" in pressed_keys:
+            player.queue_direction("up-right")
+        elif "Down" in pressed_keys and "Left" in pressed_keys:
+            player.queue_direction("down-left")
+        elif "Down" in pressed_keys and "Right" in pressed_keys:
+            player.queue_direction("down-right")
+        elif "Up" in pressed_keys:
+            player.queue_direction("up")
+        elif "Down" in pressed_keys:
+            player.queue_direction("down")
+        elif "Left" in pressed_keys:
+            player.queue_direction("left")
+        elif "Right" in pressed_keys:
+            player.queue_direction("right")
+
+    def on_press(key):
+        pressed_keys.add(key)
+        update_direction()
+
+    def on_release(key):
+        pressed_keys.discard(key)
+        update_direction()
+
     screen.listen()
-    screen.onkeypress(lambda: player.queue_direction("up"), "Up")
-    screen.onkeypress(lambda: player.queue_direction("down"), "Down")
-    screen.onkeypress(lambda: player.queue_direction("left"), "Left")
-    screen.onkeypress(lambda: player.queue_direction("right"), "Right")
+    screen.onkeypress(lambda: on_press("Up"), "Up")
+    screen.onkeyrelease(lambda: on_release("Up"), "Up")
+    screen.onkeypress(lambda: on_press("Down"), "Down")
+    screen.onkeyrelease(lambda: on_release("Down"), "Down")
+    screen.onkeypress(lambda: on_press("Left"), "Left")
+    screen.onkeyrelease(lambda: on_release("Left"), "Left")
+    screen.onkeypress(lambda: on_press("Right"), "Right")
+    screen.onkeyrelease(lambda: on_release("Right"), "Right")
+    
+    screen.onkeypress(lambda: player.queue_direction("up-left"), "q")
+    screen.onkeypress(lambda: player.queue_direction("up-right"), "e")
+    screen.onkeypress(lambda: player.queue_direction("down-left"), "z")
+    screen.onkeypress(lambda: player.queue_direction("down-right"), "c")
 
 
 def game_loop(screen, player,score_panel,lives_panel,pellet_pen,power_pellet_pen,player_start_x,player_start_y) -> None:
