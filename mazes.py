@@ -10,10 +10,10 @@ from constants import (CELL_SIZE, MAZE_GRID_ROWS, MAZE_GRID_COLUMNS,
 
 
 maze_level_1 = [
-    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXXXX.XXXXXXXXXXXXXXXX",
     "X...............O...............X",
-    "X.XXXX.XXXX.XXXXXXXXX.XXXX.XXXX.X",
-    "X.XXXX.XXXX.XXXXXXXXX.XXXX.XXXX.X",
+    "X.XXXX.XXXX.XXXX.XXXX.XXXX.XXXX.X",
+    "X.XXXX.XXXX.XXXX.XXXX.XXXX.XXXX.X",
     "X...............................X",
     "X.XXXX.XXX.............XXX.XXXX.X",
     "X.XXXX.XXXX...........XXXX.XXXX.X",
@@ -31,11 +31,11 @@ maze_level_1 = [
     "X.XXXX.XX...............XX.XXXX.X",
     "X.XXXX.X.................X.XXXX.X",
     "X...............O...............X",
-    "X.XXXX.XXXX.XXXXXXXXX.XXXX.XXXX.X",
-    "X.XXXX.XXXX.XXXXXXXXX.XXXX.XXXX.X",
+    "X.XXXX.XXXX.XXXX.XXXX.XXXX.XXXX.X",
+    "X.XXXX.XXXX.XXXX.XXXX.XXXX.XXXX.X",
     "X...............................X",
-    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    "XXXXXXXXXXXXXXXX.XXXXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXXXX.XXXXXXXXXXXXXXXX"
 ]
 
 

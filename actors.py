@@ -118,14 +118,20 @@ class Player(Actor):
             self.goto(final_x, final_y)
 
         # Screen wrapping
-        if self.xcor() > SCREEN_WIDTH / 2:
-            self.setx(-SCREEN_WIDTH / 2)
-        elif self.xcor() < -SCREEN_WIDTH / 2:
-            self.setx(SCREEN_WIDTH / 2)
-        if self.ycor() > SCREEN_HEIGHT / 2:
-            self.sety(-SCREEN_HEIGHT / 2)
-        elif self.ycor() < -SCREEN_HEIGHT / 2:
-            self.sety(SCREEN_HEIGHT / 2)
+        left_limit = MAZE_LEVEL_START_X - CELL_SIZE / 2
+        right_limit = MAZE_LEVEL_START_X + len(self.maze.grid[0]) * CELL_SIZE - CELL_SIZE / 2
+        top_limit = MAZE_LEVEL_START_Y + CELL_SIZE / 2
+        bottom_limit = MAZE_LEVEL_START_Y - len(self.maze.grid) * CELL_SIZE + CELL_SIZE / 2
+
+        if self.xcor() > right_limit:
+            self.setx(left_limit)
+        elif self.xcor() < left_limit:
+            self.setx(right_limit)
+
+        if self.ycor() > top_limit:
+            self.sety(bottom_limit)
+        elif self.ycor() < bottom_limit:
+            self.sety(top_limit)
 
     def reset_speed(self) -> None:
         self.move_speed = PLAYER_MOVE_SPEED       
