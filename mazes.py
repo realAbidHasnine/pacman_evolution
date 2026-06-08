@@ -34,8 +34,8 @@ maze_level_1 = [
     "X.XXXX.XXXX.XXXX.XXXX.XXXX.XXXX.X",
     "X.XXXX.XXXX.XXXX.XXXX.XXXX.XXXX.X",
     "X...............................X",
-    "XXXXXXXXXXXXXXXX.XXXXXXXXXXXXXXXX",
     "XXXXXXXXXXXXXXXX.XXXXXXXXXXXXXXXX"
+    
 ]
 
 
