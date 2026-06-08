@@ -73,61 +73,58 @@ class UiPanel(Pen):
 
     def draw_ui_area(self) -> None:
         self.pensize(2)
-        x = .9 * (SCREEN_WIDTH / 2)
-        top_y = .98 * (SCREEN_HEIGHT / 2) 
-        bottom_y = top_y - 3.2 * CELL_SIZE
-        self.goto(x, top_y)
+        self.pencolor("white")
+        # Draw a box on the right from x = 230 to 450, y = -260 to 260
+        self.goto(230, 260)
         self.pendown()
-        self.goto(-x,top_y)
-        self.goto(-x, bottom_y)
-        self.goto(x, bottom_y)
-        self.goto(x, top_y)
+        self.goto(450, 260)
+        self.goto(450, -260)
+        self.goto(230, -260)
+        self.goto(230, 260)
         self.penup()
 
     def draw_title_and_legend(self) -> None:
-        # 1. Ghost Legend (horizontally distributed and colored)
-        y_pos = .98 * (SCREEN_HEIGHT / 2) - 2.3 * CELL_SIZE
+        # 1. Main Title (Two lines)
+        self.goto(340, 210)
+        self.pencolor("yellow")
+        self.write("PAC-MAN", align="center", font=("Courier", 20, "bold"))
+        self.goto(340, 180)
+        self.write("EVOLUTION", align="center", font=("Courier", 20, "bold"))
         
-        self.goto(-320, y_pos)
+        # 2. Ghost Logic Header
+        self.goto(340, -60)
         self.pencolor("white")
-        self.write("Ghost Logic: ", align="left", font=("Courier", 10, "bold"))
+        self.write("GHOST LOGIC", align="center", font=("Courier", 12, "bold"))
         
-        self.goto(-230, y_pos)
-        self.pencolor("red")
-        self.write("RED", align="left", font=("Courier", 10, "bold"))
-        self.pencolor("white")
-        self.goto(-205, y_pos)
-        self.write("=Random  ", align="left", font=("Courier", 10, "bold"))
-        
-        self.goto(-140, y_pos)
-        self.pencolor("orange")
-        self.write("ORANGE", align="left", font=("Courier", 10, "bold"))
-        self.pencolor("white")
-        self.goto(-95, y_pos)
-        self.write("=Chase  ", align="left", font=("Courier", 10, "bold"))
-        
-        self.goto(-35, y_pos)
-        self.pencolor("medium spring green")
-        self.write("GREEN", align="left", font=("Courier", 10, "bold"))
-        self.pencolor("white")
-        self.goto(5, y_pos)
-        self.write("=Ambush  ", align="left", font=("Courier", 10, "bold"))
-        
-        self.goto(70, y_pos)
-        self.pencolor("cyan")
-        self.write("CYAN", align="left", font=("Courier", 10, "bold"))
-        self.pencolor("white")
-        self.goto(105, y_pos)
-        self.write("=Scatter/Chase", align="left", font=("Courier", 10, "bold"))
+        # 3. Ghost Legend List (Vertical)
+        ghosts_data = [
+            ("RED", "red", "= Random", -100),
+            ("ORANGE", "orange", "= Chase", -130),
+            ("GREEN", "medium spring green", "= Ambush", -160),
+            ("CYAN", "cyan", "= Scatter", -190)
+        ]
+        for name, color, logic, y in ghosts_data:
+            self.goto(250, y)
+            self.pencolor(color)
+            self.write(name, align="left", font=("Courier", 10, "bold"))
+            # Calculate spacing for inline logic label
+            x_offset = 250 + len(name) * 8.5
+            self.goto(x_offset, y)
+            self.pencolor("white")
+            self.write(logic, align="left", font=("Courier", 10, "bold"))
 
     def write_score(self, score) -> None:
         self.clear()
-        self.goto(-SCREEN_WIDTH / 4, .98 * (SCREEN_HEIGHT / 2) - 1.1 * CELL_SIZE)
         self.pencolor("white")
-        self.write(f"Live Score: {score}", align="center", font=self.font)
+        self.goto(340, 110)
+        self.write("Live Score", align="center", font=self.font)
+        self.goto(340, 80)
+        self.write(f"{score}", align="center", font=("Courier", 20, "bold"))
 
     def write_lives(self, lives) -> None:
         self.clear()
-        self.goto(SCREEN_WIDTH / 4, .98 * (SCREEN_HEIGHT / 2) - 1.1 * CELL_SIZE)
         self.pencolor("white")
-        self.write(f"Remaining Lives: {lives}", align="center", font=self.font)
+        self.goto(340, 20)
+        self.write("Remaining Lives", align="center", font=self.font)
+        self.goto(340, -10)
+        self.write(f"{lives}", align="center", font=("Courier", 20, "bold"))
