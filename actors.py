@@ -1,8 +1,59 @@
+import random
 import turtle
+from collections import deque
 from constants import (CELL_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT,
                        PLAYER_MOVE_SPEED, MAZE_LEVEL_START_X,
                        MAZE_LEVEL_START_Y, MAZE_GRID_ROWS,
                        MAZE_GRID_COLUMNS)
+
+DIRECTION_VECTORS = {
+    "up": (0, -1),
+    "down": (0, 1),
+    "left": (-1, 0),
+    "right": (1, 0),
+    "up-left": (-1, -1),
+    "up-right": (1, -1),
+    "down-left": (-1, 1),
+    "down-right": (1, 1),
+}
+
+CARDINAL_STEPS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+DIAGONAL_STEPS = [(-1, -1), (1, -1), (-1, 1), (1, 1)]
+EIGHT_WAY_STEPS = CARDINAL_STEPS + DIAGONAL_STEPS
+
+
+def wrap_cell(gx, gy, grid):
+    rows = len(grid)
+    cols = len(grid[0])
+    return (gx + cols) % cols, (gy + rows) % rows
+
+
+def is_open_cell(gx, gy, grid):
+    wx, wy = wrap_cell(gx, gy, grid)
+    return grid[wy][wx] != "X"
+
+
+def can_step_grid(gx, gy, dx, dy, grid):
+    nx = gx + dx
+    ny = gy + dy
+    if not is_open_cell(nx, ny, grid):
+        return False
+
+    if dx != 0 and dy != 0:
+        # Diagonal movement should not squeeze through two wall corners.
+        return is_open_cell(gx + dx, gy, grid) and is_open_cell(gx, gy + dy, grid)
+
+    return True
+
+
+def octile_distance(a, b):
+    dx = abs(a[0] - b[0])
+    dy = abs(a[1] - b[1])
+    return max(dx, dy)
+
+
+def direction_to_delta(direction):
+    return DIRECTION_VECTORS.get(direction, (0, 0))
 
 class Actor(turtle.Turtle):
     def __init__(self) -> None:
@@ -60,15 +111,18 @@ class Player(Actor):
             if is_at_center_x and is_at_center_y:
                 center_x = MAZE_LEVEL_START_X + round(col_float) * CELL_SIZE
                 center_y = MAZE_LEVEL_START_Y - round(row_float) * CELL_SIZE
+                center_gx = round(col_float)
+                center_gy = round(row_float)
+                dir_dx, dir_dy = direction_to_delta(new_dir)
 
-                # Simplified check for turning, can be improved
-                can_turn = True
+                can_turn = can_step_grid(center_gx, center_gy, dir_dx, dir_dy, self.maze.grid)
                 snap_x, snap_y = center_x, center_y
 
             if can_turn:
                 self.direction = new_dir
                 if snap_x != x: self.setx(snap_x)
                 if snap_y != y: self.sety(snap_y)
+                x, y = snap_x, snap_y
                 self.buffered_direction = None
             else:
                 self.buffer_timer -= 1
@@ -140,38 +194,35 @@ class Player(Actor):
 def bfs(start, target, grid):
     rows = len(grid)
     cols = len(grid[0])
-    queue = [start]
+    start = wrap_cell(start[0], start[1], grid)
+    target = wrap_cell(target[0], target[1], grid)
+    queue = deque([start])
     parent = {start: None}
-    
-    target = tuple(target)
+
     if start == target:
         return []
-        
+
     found = False
     while queue:
-        current = queue.pop(0)
+        current = queue.popleft()
         if current == target:
             found = True
             break
-            
+
         gx, gy = current
-        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        for dx, dy in EIGHT_WAY_STEPS:
             nx = gx + dx
             ny = gy + dy
-            
-            # Wrap coordinates
-            wrap_x = (nx + cols) % cols
-            wrap_y = (ny + rows) % rows
-            
-            if grid[wrap_y][wrap_x] != "X":
-                neighbor = (wrap_x, wrap_y)
+
+            if can_step_grid(gx, gy, dx, dy, grid):
+                neighbor = ((nx + cols) % cols, (ny + rows) % rows)
                 if neighbor not in parent:
                     parent[neighbor] = current
                     queue.append(neighbor)
-                    
+
     if not found:
         return []
-        
+
     path = []
     curr = target
     while curr is not None:
@@ -185,23 +236,22 @@ def get_closest_valid_cell(target, grid):
     target_gx, target_gy = target
     rows = len(grid)
     cols = len(grid[0])
-    
-    target_gx = (target_gx + cols) % cols
-    target_gy = (target_gy + rows) % rows
-    
-    if grid[target_gy][target_gx] != "X":
+
+    target_gx, target_gy = wrap_cell(target_gx, target_gy, grid)
+
+    if is_open_cell(target_gx, target_gy, grid):
         return (target_gx, target_gy)
-        
+
     # BFS to find the closest valid cell
-    queue = [(target_gx, target_gy)]
+    queue = deque([(target_gx, target_gy)])
     visited = {(target_gx, target_gy)}
-    
+
     while queue:
-        gx, gy = queue.pop(0)
-        if grid[gy][gx] != "X":
+        gx, gy = queue.popleft()
+        if is_open_cell(gx, gy, grid):
             return (gx, gy)
-            
-        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+
+        for dx, dy in EIGHT_WAY_STEPS:
             nx = (gx + dx + cols) % cols
             ny = (gy + dy + rows) % rows
             if (nx, ny) not in visited:
@@ -268,17 +318,12 @@ class BaseGhost(Actor):
             self.goto(tx, ty)
             
     def get_neighbors(self, gx, gy):
-        rows = len(self.maze.grid)
-        cols = len(self.maze.grid[0])
         neighbors = []
-        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        for dx, dy in EIGHT_WAY_STEPS:
             nx = gx + dx
             ny = gy + dy
-            
-            wrap_x = (nx + cols) % cols
-            wrap_y = (ny + rows) % rows
-            
-            if self.maze.grid[wrap_y][wrap_x] != "X":
+
+            if can_step_grid(gx, gy, dx, dy, self.maze.grid):
                 neighbors.append((nx, ny))
         return neighbors
         
@@ -308,6 +353,32 @@ class BaseGhost(Actor):
         
         best_neighbor = self.get_best_neighbor(neighbors, player_x, player_y, player_dir, remaining_pellets)
         self.next_gx, self.next_gy = best_neighbor
+
+    def closest_neighbor_to(self, neighbors, target_cell):
+        target_cell = get_closest_valid_cell(target_cell, self.maze.grid)
+
+        best_neighbor = neighbors[0]
+        best_score = float("inf")
+        for nx, ny in neighbors:
+            neighbor_cell = wrap_cell(nx, ny, self.maze.grid)
+            score = octile_distance(neighbor_cell, target_cell)
+            if score < best_score:
+                best_score = score
+                best_neighbor = (nx, ny)
+        return best_neighbor
+
+    def path_neighbor_to(self, neighbors, target_cell):
+        target_cell = get_closest_valid_cell(target_cell, self.maze.grid)
+        start_cell = wrap_cell(self.gx, self.gy, self.maze.grid)
+        path = bfs(start_cell, target_cell, self.maze.grid)
+
+        if path:
+            next_step = path[0]
+            for nx, ny in neighbors:
+                if wrap_cell(nx, ny, self.maze.grid) == next_step:
+                    return (nx, ny)
+
+        return self.closest_neighbor_to(neighbors, target_cell)
         
     def move(self, player_x, player_y, player_dir, remaining_pellets, total_pellets):
         fraction_eaten = 0.0
@@ -338,8 +409,9 @@ class BaseGhost(Actor):
         dy = self.target_y - y
         dist = (dx**2 + dy**2)**0.5
         if dist > 0:
-            step_x = (dx / dist) * self.move_speed
-            step_y = (dy / dist) * self.move_speed
+            step = min(self.move_speed, dist)
+            step_x = (dx / dist) * step
+            step_y = (dy / dist) * step
             self.goto(x + step_x, y + step_y)
 
 
@@ -347,10 +419,26 @@ class RedGhost(BaseGhost):
     def __init__(self, maze, start_gx, start_gy):
         super().__init__(maze, "red", start_gx, start_gy)
         self.base_speed = 2.0
-        
+
     def get_best_neighbor(self, neighbors, player_x, player_y, player_dir, remaining_pellets):
-        import random
-        return random.choice(neighbors)
+        pgx, pgy = self.world_to_grid(player_x, player_y)
+        target_cell = get_closest_valid_cell((pgx, pgy), self.maze.grid)
+
+        ranked = sorted(
+            neighbors,
+            key=lambda cell: octile_distance(wrap_cell(cell[0], cell[1], self.maze.grid), target_cell)
+        )
+
+        if len(ranked) == 1:
+            return ranked[0]
+
+        # Red is a pressure ghost: usually closes distance, sometimes varies its line.
+        roll = random.random()
+        if roll < 0.70:
+            return ranked[0]
+        if roll < 0.90:
+            return ranked[min(1, len(ranked) - 1)]
+        return random.choice(ranked[:min(3, len(ranked))])
 
 
 class YellowGhost(BaseGhost):
@@ -360,30 +448,7 @@ class YellowGhost(BaseGhost):
         
     def get_best_neighbor(self, neighbors, player_x, player_y, player_dir, remaining_pellets):
         pgx, pgy = self.world_to_grid(player_x, player_y)
-        target_cell = get_closest_valid_cell((pgx, pgy), self.maze.grid)
-        
-        cols = len(self.maze.grid[0])
-        rows = len(self.maze.grid)
-        start_cell = ((self.gx + cols) % cols, (self.gy + rows) % rows)
-        path = bfs(start_cell, target_cell, self.maze.grid)
-        
-        if path:
-            next_step = path[0]
-            for nx, ny in neighbors:
-                if ((nx + cols) % cols, (ny + rows) % rows) == next_step:
-                    return (nx, ny)
-                    
-        # Fallback
-        best_n = neighbors[0]
-        min_dist = float('inf')
-        for nx, ny in neighbors:
-            wrap_x = (nx + cols) % cols
-            wrap_y = (ny + rows) % rows
-            dist = (wrap_x - target_cell[0])**2 + (wrap_y - target_cell[1])**2
-            if dist < min_dist:
-                min_dist = dist
-                best_n = (nx, ny)
-        return best_n
+        return self.path_neighbor_to(neighbors, (pgx, pgy))
 
 
 class GreenGhost(BaseGhost):
@@ -393,42 +458,14 @@ class GreenGhost(BaseGhost):
         
     def get_best_neighbor(self, neighbors, player_x, player_y, player_dir, remaining_pellets):
         pgx, pgy = self.world_to_grid(player_x, player_y)
-        dx, dy = 0, 0
-        if "up" in player_dir:
-            dy = -4
-        elif "down" in player_dir:
-            dy = 4
-        if "left" in player_dir:
-            dx = -4
-        elif "right" in player_dir:
-            dx = 4
-            
-        target_gx = pgx + dx
-        target_gy = pgy + dy
-        target_cell = get_closest_valid_cell((target_gx, target_gy), self.maze.grid)
-        
-        cols = len(self.maze.grid[0])
-        rows = len(self.maze.grid)
-        start_cell = ((self.gx + cols) % cols, (self.gy + rows) % rows)
-        path = bfs(start_cell, target_cell, self.maze.grid)
-        
-        if path:
-            next_step = path[0]
-            for nx, ny in neighbors:
-                if ((nx + cols) % cols, (ny + rows) % rows) == next_step:
-                    return (nx, ny)
-                    
-        # Fallback
-        best_n = neighbors[0]
-        min_dist = float('inf')
-        for nx, ny in neighbors:
-            wrap_x = (nx + cols) % cols
-            wrap_y = (ny + rows) % rows
-            dist = (wrap_x - target_cell[0])**2 + (wrap_y - target_cell[1])**2
-            if dist < min_dist:
-                min_dist = dist
-                best_n = (nx, ny)
-        return best_n
+        dx, dy = direction_to_delta(player_dir)
+
+        if dx == 0 and dy == 0:
+            return self.path_neighbor_to(neighbors, (pgx, pgy))
+
+        target_gx = pgx + dx * 4
+        target_gy = pgy + dy * 4
+        return self.path_neighbor_to(neighbors, (target_gx, target_gy))
 
 
 class BlueGhost(BaseGhost):
@@ -455,32 +492,23 @@ class BlueGhost(BaseGhost):
     def get_best_neighbor(self, neighbors, player_x, player_y, player_dir, remaining_pellets):
         cols = len(self.maze.grid[0])
         rows = len(self.maze.grid)
-        
+
         if self.mode == "scatter":
             target_cell = (cols - 2, rows - 2)
         else:
             pgx, pgy = self.world_to_grid(player_x, player_y)
-            target_cell = (pgx, pgy)
-            
-        target_cell = get_closest_valid_cell(target_cell, self.maze.grid)
-        
-        start_cell = ((self.gx + cols) % cols, (self.gy + rows) % rows)
-        path = bfs(start_cell, target_cell, self.maze.grid)
-        
-        if path:
-            next_step = path[0]
-            for nx, ny in neighbors:
-                if ((nx + cols) % cols, (ny + rows) % rows) == next_step:
-                    return (nx, ny)
-                    
-        # Fallback
-        best_n = neighbors[0]
-        min_dist = float('inf')
-        for nx, ny in neighbors:
-            wrap_x = (nx + cols) % cols
-            wrap_y = (ny + rows) % rows
-            dist = (wrap_x - target_cell[0])**2 + (wrap_y - target_cell[1])**2
-            if dist < min_dist:
-                min_dist = dist
-                best_n = (nx, ny)
-        return best_n
+            dx, dy = direction_to_delta(player_dir)
+            if dx == 0 and dy == 0:
+                target_cell = (pgx, pgy)
+            else:
+                left_flank = (-dy, dx)
+                right_flank = (dy, -dx)
+                left_target = (pgx + left_flank[0] * 4, pgy + left_flank[1] * 4)
+                right_target = (pgx + right_flank[0] * 4, pgy + right_flank[1] * 4)
+
+                ghost_cell = wrap_cell(self.gx, self.gy, self.maze.grid)
+                left_score = octile_distance(ghost_cell, wrap_cell(left_target[0], left_target[1], self.maze.grid))
+                right_score = octile_distance(ghost_cell, wrap_cell(right_target[0], right_target[1], self.maze.grid))
+                target_cell = left_target if left_score >= right_score else right_target
+
+        return self.path_neighbor_to(neighbors, target_cell)
