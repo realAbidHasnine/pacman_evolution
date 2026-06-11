@@ -9,7 +9,7 @@ from mazes import maze_level_1, get_maze
 
 
 def init_screen():
-    """Initialize main Screen"""
+    
 
     screen = turtle.Screen()
     screen.tracer(0)
