@@ -65,17 +65,69 @@ def bind_controls(screen, player) -> None:
     screen.onkeypress(lambda: player.queue_direction("down-right"), "c")
 
 
-def show_game_over(screen, ui_panel):
+def show_game_over(screen, ui_panel, restart_callback):
     ui_panel.goto(0, 0)
     ui_panel.pencolor("red")
     ui_panel.write("GAME OVER", align="center", font=("Courier", 40, "bold"))
+    
+    # Draw button background (white)
+    ui_panel.goto(-80, -85)
+    ui_panel.setheading(0)
+    ui_panel.fillcolor("white")
+    ui_panel.begin_fill()
+    for _ in range(2):
+        ui_panel.forward(160)
+        ui_panel.left(90)
+        ui_panel.forward(40)
+        ui_panel.left(90)
+    ui_panel.end_fill()
+
+    # Draw Restart Button Text (black)
+    ui_panel.goto(0, -75)
+    ui_panel.pencolor("black")
+    ui_panel.write("RESTART", align="center", font=("Courier", 20, "bold"))
+    ui_panel.penup()
+    
+    def handle_click(x, y):
+        # Button boundaries: x in [-80, 80], y in [-85, -45]
+        if -80 <= x <= 80 and -85 <= y <= -45:
+            screen.onclick(None)
+            restart_callback()
+
+    screen.onclick(handle_click)
     screen.update()
 
 
-def show_victory(screen, ui_panel):
+def show_victory(screen, ui_panel, restart_callback):
     ui_panel.goto(0, 0)
     ui_panel.pencolor("chartreuse")
     ui_panel.write("YOU WIN!", align="center", font=("Courier", 40, "bold"))
+    
+    # Draw button background (white)
+    ui_panel.goto(-80, -85)
+    ui_panel.setheading(0)
+    ui_panel.fillcolor("white")
+    ui_panel.begin_fill()
+    for _ in range(2):
+        ui_panel.forward(160)
+        ui_panel.left(90)
+        ui_panel.forward(40)
+        ui_panel.left(90)
+    ui_panel.end_fill()
+
+    # Draw Restart Button Text (black)
+    ui_panel.goto(0, -75)
+    ui_panel.pencolor("black")
+    ui_panel.write("RESTART", align="center", font=("Courier", 20, "bold"))
+    ui_panel.penup()
+    
+    def handle_click(x, y):
+        # Button boundaries: x in [-80, 80], y in [-85, -45]
+        if -80 <= x <= 80 and -85 <= y <= -45:
+            screen.onclick(None)
+            restart_callback()
+
+    screen.onclick(handle_click)
     screen.update()
 
 
@@ -99,14 +151,14 @@ def reset_positions(player, ghosts, player_start_x, player_start_y):
             del ghost.prev_gy
 
 
-def game_loop(screen, player, ghosts, score_panel, lives_panel, ui_panel, pellet_pen, power_pellet_pen, player_start_x, player_start_y, total_pellets) -> None:
+def game_loop(screen, player, ghosts, score_panel, lives_panel, ui_panel, pellet_pen, power_pellet_pen, player_start_x, player_start_y, total_pellets, restart_callback) -> None:
     score_panel.write_score(player.score)
     lives_panel.write_lives(player.lives)
 
     remaining_pellets = len(pellet_pen.stamps)
     
     if remaining_pellets == 0:
-        show_victory(screen, score_panel)
+        show_victory(screen, ui_panel, restart_callback)
         return
 
     for (px,py),stamp_id in list(pellet_pen.stamps.items()):
@@ -137,11 +189,11 @@ def game_loop(screen, player, ghosts, score_panel, lives_panel, ui_panel, pellet
             if player.lives > 0:
                 reset_positions(player, ghosts, player_start_x, player_start_y)
             else:
-                show_game_over(screen, ui_panel)
+                show_game_over(screen, ui_panel, restart_callback)
                 return
 
     screen.update()
-    screen.ontimer(lambda: game_loop(screen, player, ghosts, score_panel, lives_panel, ui_panel, pellet_pen, power_pellet_pen, player_start_x, player_start_y, total_pellets), 1000 // 60)
+    screen.ontimer(lambda: game_loop(screen, player, ghosts, score_panel, lives_panel, ui_panel, pellet_pen, power_pellet_pen, player_start_x, player_start_y, total_pellets, restart_callback), 1000 // 60)
 
 
 def main() -> None:
@@ -156,10 +208,9 @@ def main() -> None:
     ui_panel = UiPanel()
     score_panel = UiPanel()
     lives_panel = UiPanel()
+    message_panel = UiPanel() # Separate panel for Game Over / Victory messages
 
     wall_pen.draw()
-    pellet_pen.draw()
-    power_pellet_pen.draw()
     ui_panel.draw_ui_area()
     ui_panel.draw_title_and_legend()
 
@@ -174,15 +225,11 @@ def main() -> None:
         ghost_start_world_coords.append((x, y))
 
     candidate_starts = [
-        coor for coor in pellet_pen.maze.pellets
+        coor for coor in maze.pellets
         if coor not in ghost_start_world_coords
     ]
     if not candidate_starts:
-        candidate_starts = pellet_pen.maze.pellets
-
-    player_start_coor = random.choice(candidate_starts)
-    player.goto(player_start_coor[0], player_start_coor[1])
-    bind_controls(screen, player)
+        candidate_starts = maze.pellets
 
     # Initialize the 4 ghosts
     red_ghost = RedGhost(maze, 1, 1)
@@ -191,9 +238,38 @@ def main() -> None:
     blue_ghost = BlueGhost(maze, 31, 23)
     ghosts = [red_ghost, yellow_ghost, green_ghost, blue_ghost]
 
-    total_pellets = len(pellet_pen.stamps)
+    def start_new_game():
+        # Clear any existing messages and reset UI panels
+        message_panel.clear()
+        score_panel.clear()
+        lives_panel.clear()
+        
+        # Reset Pellets
+        pellet_pen.clearstamps()
+        pellet_pen.stamps = {}
+        pellet_pen.draw()
+        
+        power_pellet_pen.clearstamps()
+        power_pellet_pen.stamps = {}
+        power_pellet_pen.draw()
+        
+        # Reset Player stats
+        player.score = 0
+        player.lives = 3
+        player.reset_speed()
+        
+        # Reset positions
+        player_start_coor = random.choice(candidate_starts)
+        reset_positions(player, ghosts, player_start_coor[0], player_start_coor[1])
+        
+        # Ensure controls are bound and screen is listening
+        bind_controls(screen, player)
+        
+        total_pellets = len(pellet_pen.stamps)
 
-    game_loop(screen, player, ghosts, score_panel, lives_panel, ui_panel, pellet_pen, power_pellet_pen, player_start_coor[0], player_start_coor[1], total_pellets)
+        game_loop(screen, player, ghosts, score_panel, lives_panel, message_panel, pellet_pen, power_pellet_pen, player_start_coor[0], player_start_coor[1], total_pellets, start_new_game)
+
+    start_new_game()
     screen.mainloop()
 
 

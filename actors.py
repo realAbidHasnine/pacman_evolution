@@ -265,7 +265,7 @@ class BaseGhost(Actor):
     def __init__(self, maze, color, start_gx, start_gy):
         super().__init__()
         self.showturtle()
-        self.shape("circle")
+        self.shape("square")
         self.shapesize(0.9)
         self.pencolor("white")
         self.fillcolor(color)
