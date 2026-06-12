@@ -271,7 +271,7 @@ def main() -> None:
     start_new_game()
     screen.mainloop()
 
-# rdfgdgrdhdrt/
+
 
 if __name__ == "__main__":
     main()        
