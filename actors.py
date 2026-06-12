@@ -1,6 +1,6 @@
-import random
 import turtle
 from collections import deque
+import heapq
 from constants import (CELL_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT,
                        PLAYER_MOVE_SPEED, MAZE_LEVEL_START_X,
                        MAZE_LEVEL_START_Y, MAZE_GRID_ROWS,
@@ -232,6 +232,91 @@ def bfs(start, target, grid):
     return path[1:]
 
 
+def dfs(start, target, grid):
+    rows = len(grid)
+    cols = len(grid[0])
+    start = wrap_cell(start[0], start[1], grid)
+    target = wrap_cell(target[0], target[1], grid)
+    stack = [start]
+    parent = {start: None}
+
+    if start == target:
+        return []
+
+    found = False
+    while stack:
+        current = stack.pop()
+        if current == target:
+            found = True
+            break
+
+        gx, gy = current
+        for dx, dy in reversed(EIGHT_WAY_STEPS):
+            if can_step_grid(gx, gy, dx, dy, grid):
+                neighbor = ((gx + dx + cols) % cols, (gy + dy + rows) % rows)
+                if neighbor not in parent:
+                    parent[neighbor] = current
+                    stack.append(neighbor)
+
+    if not found:
+        return []
+
+    path = []
+    curr = target
+    while curr is not None:
+        path.append(curr)
+        curr = parent[curr]
+    path.reverse()
+    return path[1:]
+
+
+def step_cost(dx, dy):
+    return 1.414 if dx != 0 and dy != 0 else 1.0
+
+
+def ucs(start, target, grid):
+    rows = len(grid)
+    cols = len(grid[0])
+    start = wrap_cell(start[0], start[1], grid)
+    target = wrap_cell(target[0], target[1], grid)
+    frontier = [(0.0, start)]
+    parent = {start: None}
+    cost_so_far = {start: 0.0}
+
+    if start == target:
+        return []
+
+    found = False
+    while frontier:
+        current_cost, current = heapq.heappop(frontier)
+        if current_cost > cost_so_far[current]:
+            continue
+        if current == target:
+            found = True
+            break
+
+        gx, gy = current
+        for dx, dy in EIGHT_WAY_STEPS:
+            if can_step_grid(gx, gy, dx, dy, grid):
+                neighbor = ((gx + dx + cols) % cols, (gy + dy + rows) % rows)
+                new_cost = current_cost + step_cost(dx, dy)
+                if neighbor not in cost_so_far or new_cost < cost_so_far[neighbor]:
+                    cost_so_far[neighbor] = new_cost
+                    parent[neighbor] = current
+                    heapq.heappush(frontier, (new_cost, neighbor))
+
+    if not found:
+        return []
+
+    path = []
+    curr = target
+    while curr is not None:
+        path.append(curr)
+        curr = parent[curr]
+    path.reverse()
+    return path[1:]
+
+
 def get_closest_valid_cell(target, grid):
     target_gx, target_gy = target
     rows = len(grid)
@@ -379,6 +464,75 @@ class BaseGhost(Actor):
                     return (nx, ny)
 
         return self.closest_neighbor_to(neighbors, target_cell)
+
+    def dfs_neighbor_to(self, neighbors, target_cell):
+        target_cell = get_closest_valid_cell(target_cell, self.maze.grid)
+        start_cell = wrap_cell(self.gx, self.gy, self.maze.grid)
+        path = dfs(start_cell, target_cell, self.maze.grid)
+
+        if path:
+            next_step = path[0]
+            for nx, ny in neighbors:
+                if wrap_cell(nx, ny, self.maze.grid) == next_step:
+                    return (nx, ny)
+
+        return self.closest_neighbor_to(neighbors, target_cell)
+
+    def ucs_neighbor_to(self, neighbors, target_cell):
+        target_cell = get_closest_valid_cell(target_cell, self.maze.grid)
+        start_cell = wrap_cell(self.gx, self.gy, self.maze.grid)
+        path = ucs(start_cell, target_cell, self.maze.grid)
+
+        if path:
+            next_step = path[0]
+            for nx, ny in neighbors:
+                if wrap_cell(nx, ny, self.maze.grid) == next_step:
+                    return (nx, ny)
+
+        return self.closest_neighbor_to(neighbors, target_cell)
+
+    def minimax_neighbor_to(self, neighbors, player_cell, depth=3):
+        grid = self.maze.grid
+        player_cell = get_closest_valid_cell(player_cell, grid)
+
+        def legal_steps(cell):
+            gx, gy = cell
+            steps = []
+            for dx, dy in EIGHT_WAY_STEPS:
+                if can_step_grid(gx, gy, dx, dy, grid):
+                    steps.append(wrap_cell(gx + dx, gy + dy, grid))
+            return steps or [wrap_cell(gx, gy, grid)]
+
+        def score_position(ghost_cell, pac_cell):
+            distance_score = -octile_distance(ghost_cell, pac_cell)
+            escape_routes = len(legal_steps(pac_cell))
+            return distance_score - escape_routes * 0.35
+
+        def search(ghost_cell, pac_cell, remaining_depth, ghost_turn):
+            if remaining_depth == 0 or ghost_cell == pac_cell:
+                return score_position(ghost_cell, pac_cell)
+
+            if ghost_turn:
+                return max(
+                    search(next_ghost, pac_cell, remaining_depth - 1, False)
+                    for next_ghost in legal_steps(ghost_cell)
+                )
+
+            return min(
+                search(ghost_cell, next_pac, remaining_depth - 1, True)
+                for next_pac in legal_steps(pac_cell)
+            )
+
+        best_neighbor = neighbors[0]
+        best_score = float("-inf")
+        for nx, ny in neighbors:
+            ghost_cell = wrap_cell(nx, ny, grid)
+            score = search(ghost_cell, player_cell, depth - 1, False)
+            if score > best_score:
+                best_score = score
+                best_neighbor = (nx, ny)
+
+        return best_neighbor
         
     def move(self, player_x, player_y, player_dir, remaining_pellets, total_pellets):
         fraction_eaten = 0.0
@@ -422,23 +576,7 @@ class RedGhost(BaseGhost):
 
     def get_best_neighbor(self, neighbors, player_x, player_y, player_dir, remaining_pellets):
         pgx, pgy = self.world_to_grid(player_x, player_y)
-        target_cell = get_closest_valid_cell((pgx, pgy), self.maze.grid)
-
-        ranked = sorted(
-            neighbors,
-            key=lambda cell: octile_distance(wrap_cell(cell[0], cell[1], self.maze.grid), target_cell)
-        )
-
-        if len(ranked) == 1:
-            return ranked[0]
-
-        # Red is a pressure ghost: usually closes distance, sometimes varies its line.
-        roll = random.random()
-        if roll < 0.70:
-            return ranked[0]
-        if roll < 0.90:
-            return ranked[min(1, len(ranked) - 1)]
-        return random.choice(ranked[:min(3, len(ranked))])
+        return self.path_neighbor_to(neighbors, (pgx, pgy))
 
 
 class YellowGhost(BaseGhost):
@@ -448,7 +586,7 @@ class YellowGhost(BaseGhost):
         
     def get_best_neighbor(self, neighbors, player_x, player_y, player_dir, remaining_pellets):
         pgx, pgy = self.world_to_grid(player_x, player_y)
-        return self.path_neighbor_to(neighbors, (pgx, pgy))
+        return self.dfs_neighbor_to(neighbors, (pgx, pgy))
 
 
 class GreenGhost(BaseGhost):
@@ -458,14 +596,7 @@ class GreenGhost(BaseGhost):
         
     def get_best_neighbor(self, neighbors, player_x, player_y, player_dir, remaining_pellets):
         pgx, pgy = self.world_to_grid(player_x, player_y)
-        dx, dy = direction_to_delta(player_dir)
-
-        if dx == 0 and dy == 0:
-            return self.path_neighbor_to(neighbors, (pgx, pgy))
-
-        target_gx = pgx + dx * 4
-        target_gy = pgy + dy * 4
-        return self.path_neighbor_to(neighbors, (target_gx, target_gy))
+        return self.minimax_neighbor_to(neighbors, (pgx, pgy))
 
 
 class BlueGhost(BaseGhost):
@@ -511,4 +642,4 @@ class BlueGhost(BaseGhost):
                 right_score = octile_distance(ghost_cell, wrap_cell(right_target[0], right_target[1], self.maze.grid))
                 target_cell = left_target if left_score >= right_score else right_target
 
-        return self.path_neighbor_to(neighbors, target_cell)
+        return self.ucs_neighbor_to(neighbors, target_cell)
