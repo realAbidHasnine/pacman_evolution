@@ -19,7 +19,6 @@ def init_screen():
 
     return screen
 
-
 def bind_controls(screen, player) -> None:
     pressed_keys = set()
 
@@ -272,6 +271,7 @@ def main() -> None:
     start_new_game()
     screen.mainloop()
 
+# rdfgdgrdhdrt/
 
 if __name__ == "__main__":
     main()        
