@@ -71,7 +71,6 @@ class Maze:
             return self.grid[grid_y][grid_x] == "X"
         return False
 
-# vnfbgiu
 
 def get_maze(level):
     return Maze(level)
