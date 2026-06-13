@@ -581,7 +581,7 @@ class RedGhost(BaseGhost):
 
 class YellowGhost(BaseGhost):
     def __init__(self, maze, start_gx, start_gy):
-        super().__init__(maze, "orange", start_gx, start_gy)
+        super().__init__(maze, "yellow", start_gx, start_gy)
         self.base_speed = 2.2
         
     def get_best_neighbor(self, neighbors, player_x, player_y, player_dir, remaining_pellets):
@@ -591,7 +591,7 @@ class YellowGhost(BaseGhost):
 
 class GreenGhost(BaseGhost):
     def __init__(self, maze, start_gx, start_gy):
-        super().__init__(maze, "medium spring green", start_gx, start_gy)
+        super().__init__(maze, "green", start_gx, start_gy)
         self.base_speed = 2.1
         
     def get_best_neighbor(self, neighbors, player_x, player_y, player_dir, remaining_pellets):
@@ -601,7 +601,7 @@ class GreenGhost(BaseGhost):
 
 class BlueGhost(BaseGhost):
     def __init__(self, maze, start_gx, start_gy):
-        super().__init__(maze, "cyan", start_gx, start_gy)
+        super().__init__(maze, "blue", start_gx, start_gy)
         self.base_speed = 2.3
         self.mode_timer = 0.0
         self.mode = "scatter"

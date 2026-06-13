@@ -100,8 +100,8 @@ class UiPanel(Pen):
         ghosts_data = [
             ("RED", "red", "= Random", -100),
             ("ORANGE", "orange", "= Chase", -130),
-            ("GREEN", "medium spring green", "= Ambush", -160),
-            ("CYAN", "cyan", "= Scatter", -190)
+            ("GREEN", "medium spring green", "= Ambush/Minimax", -160),
+            ("CYAN", "cyan", "= UCS", -190)
         ]
         for name, color, logic, y in ghosts_data:
             self.goto(250, y)
